@@ -7,11 +7,11 @@ import psutil
 
 class BaseServer:
     def __init__(self, server_name="funserver", dir_path="~/.cache/servers/base"):
-        self.dir_path = dir_path
+        self.dir_path = os.path.expanduser(dir_path)
         self.server_name = server_name
         self.pid_path = f"{self.dir_path}/run.pid"
-        os.makedirs(dir_path, exist_ok=True)
-        os.makedirs(f"{dir_path}/logs", exist_ok=True)
+        os.makedirs(self.dir_path, exist_ok=True)
+        os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
 
     def run(self, *args, **kwargs):
         print("not implement yet.")
