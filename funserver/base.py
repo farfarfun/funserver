@@ -20,7 +20,8 @@ class BaseServer:
         pass
 
     def _save_pid(self, *args, **kwargs):
-        print(args.pid_path)
+        print(f"1:{args}")
+        print(f"2:{kwargs}")
         pid_path = args.pid_path or self.pid_path
         self.__write_pid(pid_path)
 
@@ -103,4 +104,6 @@ def funserver():
     server = BaseCommandServer()
     parser = server_parser(server)
     args = parser.parse_args()
-    args.func(args)
+    args._get_kwargs
+    args = vars(args)
+    args.func(**args)
