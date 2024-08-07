@@ -12,7 +12,7 @@ class BaseServer:
         self.pid_path = f"{self.dir_path}/run.pid"
 
     def run(self, *args, **kwargs):
-        pass
+        print("not implement yet.")
 
     def stop(self, *args, **kwargs):
         pass
