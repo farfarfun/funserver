@@ -105,5 +105,5 @@ def funserver():
     parser = server_parser(server)
     args = parser.parse_args()
     args._get_kwargs
-    args = vars(args)
-    args.func(**args)
+    params = vars(args)
+    args.func(**params)
