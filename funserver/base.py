@@ -3,6 +3,7 @@ import os
 import signal
 
 import psutil
+from funbuild.shell import run_shell
 
 
 class BaseServer:
@@ -33,7 +34,7 @@ class BaseServer:
         cmd1 = f"funserver pid --pid_path={self.pid_path}"
         cmd2 = f"nohup {self.server_name} run >>{self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
         cmd = f"{cmd1} && {cmd2}"
-        print(cmd)
+        run_shell(cmd)
 
     def _stop(self, *args, **kwargs):
         self.__kill_pid()
