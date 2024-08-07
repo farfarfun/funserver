@@ -10,6 +10,8 @@ class BaseServer:
         self.dir_path = dir_path
         self.server_name = server_name
         self.pid_path = f"{self.dir_path}/run.pid"
+        os.makedirs(dir_path, exist_ok=True)
+        os.makedirs(f"{dir_path}/logs", exist_ok=True)
 
     def run(self, *args, **kwargs):
         print("not implement yet.")
@@ -28,7 +30,9 @@ class BaseServer:
         self.run(*args, **kwargs)
 
     def _start(self, *args, **kwargs):
-        cmd = f"funserver pid --pid_path={self.pid_path} && {self.server_name} run"
+        cmd1 = f"funserver pid --pid_path={self.pid_path}"
+        cmd2 = f"nohup {self.server_name} run >>{self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
+        cmd = f"{cmd1} && {cmd2}"
         print(cmd)
 
     def _stop(self, *args, **kwargs):
