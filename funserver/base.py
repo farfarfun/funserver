@@ -19,6 +19,9 @@ class BaseServer:
     def update(self, *args, **kwargs):
         pass
 
+    def _save_pid(self, *args, **kwargs):
+        self.__write_pid()
+
     def _start(self, *args, **kwargs):
         self.__write_pid()
         self.start(*args, **kwargs)
@@ -67,6 +70,10 @@ class BaseServer:
 def server_parser(server: BaseServer):
     parser = argparse.ArgumentParser(prog="PROG")
     subparsers = parser.add_subparsers(help="sub-command help")
+
+    build_parser1 = subparsers.add_parser("pid", help="save current pid")
+    build_parser1.add_argument("--pid_path", default=None, help="pid_path")
+    build_parser1.set_defaults(func=server._save_pid)
 
     build_parser1 = subparsers.add_parser("start", help="start server")
     build_parser1.set_defaults(func=server._start)
