@@ -9,7 +9,7 @@ from funbuild.shell import run_shell
 class BaseServer:
     def __init__(self, server_name):
         self.server_name = server_name
-        self.dir_path = os.path.expanduser(f"~/.cache/servers/base/{server_name}")
+        self.dir_path = os.path.expanduser(f"~/.cache/servers/{server_name}")
         self.pid_path = f"{self.dir_path}/run.pid"
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
