@@ -6,11 +6,12 @@ import psutil
 
 
 class BaseServer:
-    def __init__(self, dir_path="~/.cache/servers/base"):
+    def __init__(self, server_name="funserver", dir_path="~/.cache/servers/base"):
         self.dir_path = dir_path
+        self.server_name = server_name
         self.pid_path = f"{self.dir_path}/run.pid"
 
-    def start(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         pass
 
     def stop(self, *args, **kwargs):
@@ -19,15 +20,16 @@ class BaseServer:
     def update(self, *args, **kwargs):
         pass
 
-    def _save_pid(self, *args, **kwargs):
-        print(f"1:{args}")
-        print(f"2:{kwargs}")
-        pid_path = args.pid_path or self.pid_path
+    def _save_pid(self, pid_path=None, *args, **kwargs):
+        pid_path = pid_path or self.pid_path
         self.__write_pid(pid_path)
 
+    def _run(self, *args, **kwargs):
+        self.run(*args, **kwargs)
+
     def _start(self, *args, **kwargs):
-        self.__write_pid()
-        self.start(*args, **kwargs)
+        cmd = f"funserver pid --pid_path={self.pid_path} && {self.server_name} run"
+        print(cmd)
 
     def _stop(self, *args, **kwargs):
         self.__kill_pid()
@@ -42,12 +44,13 @@ class BaseServer:
         self.update(*args, **kwargs)
         self._start(*args, **kwargs)
 
-    def __write_pid(self):
-        cache_dir = os.path.dirname(self.pid_path)
+    def __write_pid(self, pid_path=None):
+        pid_path = pid_path or self.pid_path
+        cache_dir = os.path.dirname(pid_path)
         if not os.path.exists(cache_dir):
             print(f"{cache_dir} not exists.make dir")
             os.makedirs(cache_dir)
-        with open(self.pid_path, "w") as f:
+        with open(pid_path, "w") as f:
             print(f"current pid={os.getpid()}")
             f.write(str(os.getpid()))
 
@@ -78,6 +81,9 @@ def server_parser(server: BaseServer):
     build_parser1.add_argument("--pid_path", default=None, help="pid_path")
     build_parser1.set_defaults(func=server._save_pid)
 
+    build_parser1 = subparsers.add_parser("run", help="run server")
+    build_parser1.set_defaults(func=server._run)
+
     build_parser1 = subparsers.add_parser("start", help="start server")
     build_parser1.set_defaults(func=server._start)
 
@@ -104,6 +110,5 @@ def funserver():
     server = BaseCommandServer()
     parser = server_parser(server)
     args = parser.parse_args()
-    args._get_kwargs
     params = vars(args)
     args.func(**params)
