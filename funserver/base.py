@@ -20,7 +20,9 @@ class BaseServer:
         pass
 
     def _save_pid(self, *args, **kwargs):
-        self.__write_pid()
+        print(args.pid_path)
+        pid_path = args.pid_path or self.pid_path
+        self.__write_pid(pid_path)
 
     def _start(self, *args, **kwargs):
         self.__write_pid()
