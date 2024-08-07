@@ -32,8 +32,8 @@ class BaseServer:
 
     def _start(self, *args, **kwargs):
         cmd1 = f"funserver pid --pid_path={self.pid_path}"
-        cmd2 = f"nohup {self.server_name} run >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
-        cmd = f"{cmd1} && {cmd2}"
+        cmd2 = f"nohup {self.server_name} run "
+        cmd = f"({cmd1} && {cmd2}) >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
         run_shell(cmd)
         print(f"{self.server_name} start success")
 
