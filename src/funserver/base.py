@@ -18,7 +18,9 @@ class BaseServer:
         return None
 
     def run(self, *args, **kwargs):
-        print(f"pid={os.getpid()}:not implement yet.")
+        cmd = self.run_cmd(*args, **kwargs)
+        if cmd is not None:
+            run_shell([cmd])
 
     def stop(self, *args, **kwargs):
         pass

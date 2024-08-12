@@ -11,12 +11,11 @@ class FunJupyter(BaseServer):
     def update(self, args=None, **kwargs):
         run_shell_list(["pip install -U jupyterlab"])
 
-    def run(self, *args, **kwargs):
+    def run_cmd(self, *args, **kwargs):
         config_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "config.py"
         )
-        cmd = f"jupyter lab --config {config_path}"
-        run_shell_list([cmd])
+        return f"jupyter lab --config {config_path}"
 
 
 def funjupyter():
