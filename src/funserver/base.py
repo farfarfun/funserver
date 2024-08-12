@@ -14,6 +14,9 @@ class BaseServer:
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
 
+    def run_cmd(self, *args, **kwargs):
+        return None
+
     def run(self, *args, **kwargs):
         print(f"pid={os.getpid()}:not implement yet.")
 
