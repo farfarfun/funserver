@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "funserver"
-version = "1.0.24"
+version = "1.0.25"
 description = ""
 authors = [ "farfun <1007530194@qq.com>",]
 readme = "README.md"
@@ -17,4 +17,3 @@ python = "^3.9"
 
 [tool.poetry.scripts]
 funserver = "funserver.base:funserver"
-funjupyter = "funserver.servers.funjupyter.run:funjupyter"
