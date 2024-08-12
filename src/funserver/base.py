@@ -14,7 +14,7 @@ class BaseServer:
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
 
-    def run_cmd(self, *args, **kwargs):
+    def run_cmd(self, *args, **kwargs) -> str:
         return None
 
     def run(self, *args, **kwargs):
@@ -37,7 +37,9 @@ class BaseServer:
 
     def _start(self, *args, **kwargs):
         cmd1 = f"funserver pid --pid_path={self.pid_path}"
-        cmd2 = f"nohup {self.server_name} run "
+        cmd2 = self.run_cmd(*args, **kwargs)
+        if cmd2 is None:
+            cmd2 = f"nohup {self.server_name} run "
         cmd = f"({cmd1} && {cmd2}) >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
         run_shell(cmd)
         print(f"{self.server_name} start success")

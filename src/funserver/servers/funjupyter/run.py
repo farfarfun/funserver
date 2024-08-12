@@ -15,7 +15,7 @@ class FunJupyter(BaseServer):
         config_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "config.py"
         )
-        return f"jupyter lab --config {config_path}"
+        return f"jupyter lab --config {config_path} --watch "
 
 
 def funjupyter():
