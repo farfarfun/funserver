@@ -40,7 +40,7 @@ class BaseServer:
         cmd2 = self.run_cmd(*args, **kwargs)
         if cmd2 is None:
             cmd2 = f"{self.server_name} run "
-        cmd = f"({cmd1} && nohup {cmd2}) >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
+        cmd = f"{cmd1} && nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
         run_shell(cmd)
         print(f"{self.server_name} start success")
 
