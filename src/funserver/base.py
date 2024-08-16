@@ -18,9 +18,7 @@ class BaseServer:
         return None
 
     def run(self, *args, **kwargs):
-        cmd = self.run_cmd(*args, **kwargs)
-        if cmd is not None:
-            run_shell([cmd])
+        pass
 
     def stop(self, *args, **kwargs):
         pass
@@ -33,14 +31,21 @@ class BaseServer:
         self.__write_pid(pid_path)
 
     def _run(self, *args, **kwargs):
-        self.run(*args, **kwargs)
+        self.__write_pid()
+        cmd = self.run_cmd(*args, **kwargs)
+        if cmd is not None:
+            run_shell([cmd])
+        else:
+            self.run(*args, **kwargs)
 
     def _start(self, *args, **kwargs):
         cmd1 = f"funserver pid --pid_path={self.pid_path}"
         cmd2 = self.run_cmd(*args, **kwargs)
         if cmd2 is None:
             cmd2 = f"{self.server_name} run "
-        cmd = f"{cmd1} && nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 &"
+        cmd = f"{cmd1} && (nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & )"
+        cmd = f"nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & "
+
         run_shell(cmd)
         print(f"{self.server_name} start success")
 
@@ -64,7 +69,7 @@ class BaseServer:
             print(f"{cache_dir} not exists.make dir")
             os.makedirs(cache_dir)
         with open(pid_path, "w") as f:
-            print(f"current pid={os.getpid()}")
+            print(f"current pid={os.getpid()},write to {pid_path}")
             f.write(str(os.getpid()))
 
     def __read_pid(self, remove=False):
