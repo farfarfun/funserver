@@ -1,10 +1,10 @@
 [project]
 name = "funserver"
-version = "1.0.34"
+version = "1.0.35"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = [ "funbuild>=1.5.13",]
+dependencies = []
 
 [project.scripts]
 funserver = "funserver.base:funserver"
