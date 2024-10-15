@@ -110,7 +110,7 @@ def server_parser(server: BaseServer):
 
     build_parser4 = subparsers.add_parser("update", help="update server")
     build_parser4.set_defaults(func=server._update)
-    return parser
+    return parser, subparsers
 
 
 class BaseCommandServer(BaseServer):
