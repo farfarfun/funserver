@@ -1,20 +1,10 @@
-[build-system]
-requires = [ "poetry-core",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
+[project]
 name = "funserver"
-version = "1.0.29"
-description = ""
-authors = [ "farfun <1007530194@qq.com>",]
+version = "1.0.30"
+description = "Add your description here"
 readme = "README.md"
-[[tool.poetry.packages]]
-from = "src"
-include = "*"
+requires-python = ">=3.8"
+dependencies = [ "funbuild>=1.5.11",]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-funbuild = "^1.4.13"
-
-[tool.poetry.scripts]
+[project.scripts]
 funserver = "funserver.base:funserver"
