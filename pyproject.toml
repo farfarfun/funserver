@@ -1,10 +1,16 @@
 [project]
 name = "funserver"
-version = "1.0.38"
-description = "Add your description here"
+version = "1.0.39"
+description = "funserver"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [ "funbuild>=1.5.11",]
+[[project.authors]]
+name = "niuliangtao"
+email = "farfarfun@qq.com"
 
 [project.scripts]
 funserver = "funserver.base:funserver"
+
+[tool.setuptools]
+license-files = []

@@ -1,7 +1,7 @@
-import argparse
 import os
 import signal
 
+import click
 import psutil
 from funbuild.shell import run_shell
 
@@ -89,28 +89,36 @@ class BaseServer:
 
 
 def server_parser(server: BaseServer):
-    parser = argparse.ArgumentParser(prog="PROG")
-    subparsers = parser.add_subparsers(help="sub-command help")
+    @click.group()
+    def cli():
+        pass
 
-    build_parser1 = subparsers.add_parser("pid", help="save current pid")
-    build_parser1.add_argument("--pid_path", default=None, help="pid_path")
-    build_parser1.set_defaults(func=server._save_pid)
+    @cli.command()
+    @click.option("--pid_path", type=str, default=None, help="pid_path")
+    def pit():
+        server._save_pid()
 
-    build_parser1 = subparsers.add_parser("run", help="run server")
-    build_parser1.set_defaults(func=server._run)
+    @cli.command()
+    def run():
+        server._run()
 
-    build_parser1 = subparsers.add_parser("start", help="start server")
-    build_parser1.set_defaults(func=server._start)
+    @cli.command()
+    def start():
+        server._start()
 
-    build_parser3 = subparsers.add_parser("stop", help="stop server")
-    build_parser3.set_defaults(func=server._stop)
+    @cli.command()
+    def stop():
+        server._stop()
 
-    build_parser2 = subparsers.add_parser("restart", help="restart server")
-    build_parser2.set_defaults(func=server._restart)
+    @cli.command()
+    def restart():
+        server._restart()
 
-    build_parser4 = subparsers.add_parser("update", help="update server")
-    build_parser4.set_defaults(func=server._update)
-    return parser, subparsers
+    @cli.command()
+    def update(*args, **kwargs):
+        server._update()
+
+    return cli()
 
 
 class BaseCommandServer(BaseServer):
@@ -123,7 +131,5 @@ class BaseCommandServer(BaseServer):
 
 def funserver():
     server = BaseCommandServer("funserver")
-    parser = server_parser(server)
-    args = parser.parse_args()
-    params = vars(args)
-    args.func(**params)
+    cli = server_parser(server)
+    cli()
