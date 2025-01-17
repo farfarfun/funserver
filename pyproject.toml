@@ -1,10 +1,10 @@
 [project]
 name = "funserver"
-version = "1.0.39"
+version = "1.0.40"
 description = "funserver"
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = [ "funbuild>=1.5.11",]
+dependencies = [ "click>=8.1.8", "funbuild>=1.5.11",]
 [[project.authors]]
 name = "niuliangtao"
 email = "farfarfun@qq.com"
