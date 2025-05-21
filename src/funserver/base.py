@@ -1,9 +1,13 @@
 import os
 import signal
+from typing import Optional
 
-import click
 import psutil
+import typer
 from funbuild.shell import run_shell
+from funutil import getLogger
+
+logger = getLogger("funserver")
 
 
 class BaseServer:
@@ -14,7 +18,7 @@ class BaseServer:
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
 
-    def run_cmd(self, *args, **kwargs) -> str:
+    def run_cmd(self, *args, **kwargs) -> Optional[str]:
         return None
 
     def run(self, *args, **kwargs):
@@ -26,7 +30,7 @@ class BaseServer:
     def update(self, *args, **kwargs):
         pass
 
-    def _save_pid(self, pid_path=None, *args, **kwargs):
+    def _save_pid(self, pid_path: str = None, *args, **kwargs):
         pid_path = pid_path or self.pid_path
         self.__write_pid(pid_path)
 
@@ -34,7 +38,7 @@ class BaseServer:
         self.__write_pid()
         cmd = self.run_cmd(*args, **kwargs)
         if cmd is not None:
-            run_shell([cmd])
+            run_shell(cmd)
         else:
             self.run(*args, **kwargs)
 
@@ -44,7 +48,7 @@ class BaseServer:
             cmd2 = f"{self.server_name} run "
         cmd = f"nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & "
         run_shell(cmd)
-        print(f"{self.server_name} start success")
+        logger.success(f"{self.server_name} start success")
 
     def _stop(self, *args, **kwargs):
         self.__kill_pid()
@@ -63,10 +67,10 @@ class BaseServer:
         pid_path = pid_path or self.pid_path
         cache_dir = os.path.dirname(pid_path)
         if not os.path.exists(cache_dir):
-            print(f"{cache_dir} not exists.make dir")
+            logger.success(f"{cache_dir} not exists.make dir")
             os.makedirs(cache_dir)
         with open(pid_path, "w") as f:
-            print(f"current pid={os.getpid()},write to {pid_path}")
+            logger.success(f"current pid={os.getpid()},write to {pid_path}")
             f.write(str(os.getpid()))
 
     def __read_pid(self, remove=False):
@@ -81,55 +85,51 @@ class BaseServer:
     def __kill_pid(self):
         pid = self.__read_pid(remove=True)
         if not psutil.pid_exists(pid):
-            print(f"pid {pid} not exists")
+            logger.warning(f"pid {pid} not exists")
             return
         p = psutil.Process(pid)
-        print(pid, p.cwd(), p.name(), p.username(), p.cmdline())
+        logger.success(pid, p.cwd(), p.name(), p.username(), p.cmdline())
         os.kill(pid, signal.SIGKILL)
 
 
 def server_parser(server: BaseServer):
-    @click.group()
-    def cli():
-        pass
+    app = typer.Typer()
 
-    @cli.command()
-    @click.option("--pid_path", type=str, default=None, help="pid_path")
-    def pit():
-        server._save_pid()
+    @app.command()
+    def pit(pid_path: str = typer.Option(None, help="pid_path")):
+        server._save_pid(pid_path=pid_path)
 
-    @cli.command()
+    @app.command()
     def run():
         server._run()
 
-    @cli.command()
+    @app.command()
     def start():
         server._start()
 
-    @cli.command()
+    @app.command()
     def stop():
         server._stop()
 
-    @cli.command()
+    @app.command()
     def restart():
         server._restart()
 
-    @cli.command()
-    def update(*args, **kwargs):
+    @app.command()
+    def update():
         server._update()
 
-    return cli()
+    return app
 
 
 class BaseCommandServer(BaseServer):
     def start(self, *args, **kwargs):
-        print("start")
+        logger.success("start")
 
     def stop(self, *args, **kwargs):
-        print("end")
+        logger.success("end")
 
 
 def funserver():
-    server = BaseCommandServer("funserver")
-    cli = server_parser(server)
-    cli()
+    app = server_parser(BaseCommandServer("funserver"))
+    app()
