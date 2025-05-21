@@ -11,7 +11,7 @@ logger = getLogger("fun-onehub")
 
 class FunOneHub(BaseServer):
     def __init__(self):
-        super().__init__(server_name="funjupyter")
+        super().__init__(server_name="funonehub")
 
     def update(self, args=None, **kwargs):
         run_shell_list(["pip install -U jupyterlab"])
