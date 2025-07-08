@@ -14,7 +14,7 @@ class FunOneHub(BaseServer):
         super().__init__(server_name="funonehub")
 
     def update(self, args=None, **kwargs):
-        run_shell_list(["pip install -U jupyterlab"])
+        run_shell_list(["pip install -U funrec"])
 
     def run_cmd(self, *args, **kwargs) -> Optional[str]:
         root = f"{os.environ['HOME']}/opt/one-hub"
@@ -24,7 +24,7 @@ class FunOneHub(BaseServer):
         if not os.path.exists(f"{root}/config.yaml"):
             logger.warning(f"{root}/config.yaml not exists")
             return None
-        return f"{root}/one-api --config {root}/config.yaml"
+        return f"{root}/one-hub --config {root}/config.yaml"
 
 
 def funonehub():
