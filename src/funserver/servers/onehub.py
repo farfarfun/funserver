@@ -24,7 +24,7 @@ class FunOneHub(BaseServer):
         if not os.path.exists(f"{root}/config.yaml"):
             logger.warning(f"{root}/config.yaml not exists")
             return None
-        return f"{root}/one-hub --config {root}/config.yaml"
+        return f"{root}/one-api --config {root}/config.yaml"
 
 
 def funonehub():
