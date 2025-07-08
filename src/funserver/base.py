@@ -46,6 +46,7 @@ class BaseServer:
         cmd2 = self.run_cmd(*args, **kwargs)
         if cmd2 is None:
             cmd2 = f"{self.server_name} run "
+        logger.success(f"started server with command: {cmd2}")
         cmd = f"nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & "
         run_shell(cmd)
         logger.success(f"{self.server_name} start success")
