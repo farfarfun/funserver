@@ -1,34 +1,24 @@
 import os
 import signal
-from typing import Optional
 
 import psutil
 import typer
 from funbuild.shell import run_shell
 from funutil import getLogger
 
+from .start import BaseStart
+from .install import BaseInstall
+
 logger = getLogger("funserver")
 
 
-class BaseServer:
+class BaseServer(BaseStart, BaseInstall):
     def __init__(self, server_name):
         self.server_name = server_name
         self.dir_path = os.path.expanduser(f"~/.cache/servers/{server_name}")
         self.pid_path = f"{self.dir_path}/run.pid"
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
-
-    def run_cmd(self, *args, **kwargs) -> Optional[str]:
-        return None
-
-    def run(self, *args, **kwargs):
-        pass
-
-    def stop(self, *args, **kwargs):
-        pass
-
-    def update(self, *args, **kwargs):
-        pass
 
     def _save_pid(self, pid_path: str = None, *args, **kwargs):
         pid_path = pid_path or self.pid_path
