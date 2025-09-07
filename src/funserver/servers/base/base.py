@@ -87,7 +87,7 @@ def server_parser(server: BaseServer):
     app = typer.Typer()
 
     @app.command()
-    def pit(pid_path: str = typer.Option(None, help="pid_path")):
+    def pit(pid_path: str = typer.Option(default=None, help="pid_path")):
         server._save_pid(pid_path=pid_path)
 
     @app.command()
@@ -109,6 +109,14 @@ def server_parser(server: BaseServer):
     @app.command()
     def update():
         server._update()
+
+    @app.command()
+    def install():
+        server.install()
+
+    @app.command()
+    def uninstall():
+        server.uninstall()
 
     return app
 
