@@ -4,10 +4,10 @@ import signal
 import psutil
 import typer
 from funbuild.shell import run_shell
-from funutil import getLogger
+from funlog import getLogger
 
-from .start import BaseStart
 from .install import BaseInstall
+from .start import BaseStart
 
 logger = getLogger("funserver")
 
