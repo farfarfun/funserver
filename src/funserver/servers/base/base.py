@@ -3,7 +3,7 @@ import signal
 
 import psutil
 import typer
-from funshell import run_shell
+from funshell import run_shell, run_shell_list, kill_process
 from nltlog import getLogger
 
 from .install import BaseInstall
