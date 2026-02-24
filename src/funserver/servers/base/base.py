@@ -14,12 +14,16 @@ logger = getLogger("funserver")
 
 class BaseServer(BaseStart, BaseInstall):
     def __init__(self, server_name, port=-1, *args, **kwargs):
-        self.server_name = server_name
         self.port = port
+        self.server_name = server_name
         self.dir_path = os.path.expanduser(f"~/.cache/servers/{server_name}")
         self.pid_path = f"{self.dir_path}/run.pid"
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
+
+    @property
+    def run_path(self):
+        return f"{os.environ['HOME']}/opt/{self.server_name}"
 
     def stop(self, *args, **kwargs):
         kill_process(port=self.port, name=self.server_name)
@@ -41,7 +45,7 @@ class BaseServer(BaseStart, BaseInstall):
         if cmd2 is None:
             cmd2 = f"{self.server_name} run "
         logger.success(f"started server with command: {cmd2}")
-        cmd = f"nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & "
+        cmd = f"cd {self.run_path} && nohup {cmd2} >> {self.dir_path}/logs/run-$(date +%Y-%m-%d).log 2>&1 & "
         run_shell(cmd)
         logger.success(f"{self.server_name} start success")
 
