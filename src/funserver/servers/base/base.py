@@ -21,7 +21,7 @@ class BaseServer(BaseStart, BaseInstall):
         os.makedirs(self.dir_path, exist_ok=True)
         os.makedirs(f"{self.dir_path}/logs", exist_ok=True)
 
-    def stop(*args, **kwargs):
+    def stop(self, *args, **kwargs):
         kill_process(port=self.port, name=self.server_name)
 
     def _save_pid(self, pid_path: str = None, *args, **kwargs):
