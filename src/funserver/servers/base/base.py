@@ -13,8 +13,9 @@ logger = getLogger("funserver")
 
 
 class BaseServer(BaseStart, BaseInstall):
-    def __init__(self, server_name):
+    def __init__(self, server_name, port=-1):
         self.server_name = server_name
+        self.port = port
         self.dir_path = os.path.expanduser(f"~/.cache/servers/{server_name}")
         self.pid_path = f"{self.dir_path}/run.pid"
         os.makedirs(self.dir_path, exist_ok=True)
