@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Optional
 
-from funlog import getLogger
+from nltlog import getLogger
 
 logger = getLogger("funserver")
 

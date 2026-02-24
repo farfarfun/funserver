@@ -1,7 +1,7 @@
 import sys
 from abc import ABC
 
-from funlog import getLogger
+from nltlog import getLogger
 
 logger = getLogger("funserver")
 

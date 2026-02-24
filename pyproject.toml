@@ -1,6 +1,6 @@
 [project]
 name = "funserver"
-version = "1.0.59"
+version = "1.0.60"
 description = "funserver"
 readme = "README.md"
 requires-python = ">=3.8"

@@ -4,7 +4,7 @@ import signal
 import psutil
 import typer
 from funshell import run_shell
-from funlog import getLogger
+from nltlog import getLogger
 
 from .install import BaseInstall
 from .start import BaseStart
