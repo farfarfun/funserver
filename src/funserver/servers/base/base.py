@@ -3,7 +3,7 @@ import signal
 
 import psutil
 import typer
-from funbuild.shell import run_shell
+from funshell import run_shell
 from funlog import getLogger
 
 from .install import BaseInstall

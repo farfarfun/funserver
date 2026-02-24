@@ -1,7 +1,7 @@
 import os.path
 
 from funserver.servers.base.base import BaseServer, server_parser
-from pyintime.build.shell import run_shell_list
+from funshell import run_shell_list
 
 
 class FunJupyter(BaseServer):

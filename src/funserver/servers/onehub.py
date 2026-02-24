@@ -2,8 +2,8 @@ import os
 from typing import Optional
 
 import requests
-from funbuild.shell import run_shell_list
-from funlog import getLogger
+from funshell import run_shell_list
+from nltlog import getLogger
 
 from funserver.servers.base.base import BaseServer, server_parser
 
