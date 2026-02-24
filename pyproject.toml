@@ -1,6 +1,6 @@
 [project]
 name = "funserver"
-version = "1.0.60"
+version = "1.0.61"
 description = "funserver"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -23,7 +23,6 @@ email = "farfarfun@qq.com"
 
 [project.scripts]
 funserver = "funserver.base:funserver"
-funonehub = "funserver.servers.onehub:funonehub"
 
 [project.urls]
 Organization = "https://github.com/farfarfun"
