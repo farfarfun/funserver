@@ -109,35 +109,35 @@ def test_server_parser_cli_help(tmp_path, monkeypatch):
     assert "Usage" in result.output
 
 
-def test_cli_entry_point_console_script_is_broken():
-    """KNOWN BUG (not fixed here, out of scope for this smoke-test task):
-
-    pyproject.toml declares the `funserver` console script as
-    `funserver.base:funserver`, but no `funserver/base.py` module exists.
-    The real function lives at `funserver.servers.base.base:funserver`.
-    Running the installed console script therefore fails with
-    `ModuleNotFoundError: No module named 'funserver.base'`.
-
-    We skip actually invoking the broken console script and instead just
-    confirm the underlying `funserver()` app-building function works when
-    imported from its real location (covered by
-    test_server_parser_cli_help). This test documents the bug via subprocess
-    so it's visible if/when the entry point is fixed upstream.
+def test_cli_entry_point_module_path_is_importable():
+    """farfarfun/todo-list#157: pyproject.toml's [project.scripts] entry used
+    to point at `funserver.base:funserver`, but no `funserver/base.py` module
+    ever existed -- the real function lives at
+    `funserver.servers.base.base:funserver`. Fixed by pointing the console
+    script entry at the real module path. `funserver.base` itself still
+    doesn't exist (it was never meant to); the actual entry point target must
+    resolve.
     """
     result = subprocess.run(
         [sys.executable, "-c", "from funserver.base import funserver"],
         capture_output=True,
         text=True,
     )
-    if result.returncode == 0:
-        pytest.fail(
-            "funserver.base now exists -- pyproject.toml [project.scripts] "
-            "entry point may no longer be broken; consider un-skipping a "
-            "real `funserver --help` subprocess test."
-        )
-    pytest.skip(
-        "Known bug: [project.scripts] entry point 'funserver.base:funserver' "
-        "points at a nonexistent module (real path is "
-        "funserver.servers.base.base:funserver). Not fixed here per smoke-test "
-        "task scope -- reported upstream instead."
+    assert result.returncode != 0, "funserver.base is not expected to exist"
+
+    result = subprocess.run(
+        [sys.executable, "-c", "from funserver.servers.base.base import funserver"],
+        capture_output=True,
+        text=True,
     )
+    assert result.returncode == 0, result.stderr
+
+
+def test_cli_installed_console_script_runs():
+    """The installed `funserver` console script (from [project.scripts])
+    should actually resolve and run, not just the underlying function."""
+    result = subprocess.run(
+        ["funserver", "--help"], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Usage" in result.stdout

@@ -22,7 +22,7 @@ name = "farfarfun"
 email = "farfarfun@qq.com"
 
 [project.scripts]
-funserver = "funserver.base:funserver"
+funserver = "funserver.servers.base.base:funserver"
 
 [project.urls]
 Organization = "https://github.com/farfarfun"
