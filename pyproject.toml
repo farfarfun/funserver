@@ -3,7 +3,7 @@ name = "funserver"
 version = "1.0.72"
 description = "funserver"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [ "click>=8.1.8", "funshell>=1.0.2", "farlog>=1.1.7", "psutil>=7.0.0", "typer>=0.15.3",]
 [[project.authors]]
 name = "牛哥"
