@@ -28,20 +28,23 @@ pip install funserver
 FunServer 提供了统一的命令行接口来管理服务器：
 
 ```bash
-# 启动服务器
-funserver start
+# 启动开发环境（后台）
+scripts/setup.sh start dev
 
 # 停止服务器
-funserver stop
+scripts/setup.sh stop dev
 
 # 重启服务器
-funserver restart
+scripts/setup.sh restart dev
 
 # 更新服务器
 funserver update
 
 # 运行服务器（前台运行）
-funserver run
+scripts/setup.sh run dev
+
+# 查看开发环境状态
+scripts/setup.sh status
 ```
 
 ### OneHub 服务器管理
@@ -195,3 +198,34 @@ mycustomserver = "mypackage.servers.custom:mycustomserver"
 - 支持 OneHub 服务器管理
 - 完善的跨平台安装支持
 - 改进的日志管理系统
+
+## 服务生命周期
+
+`scripts/setup.sh` 必须从仓库根目录以外的位置也能运行：
+
+```bash
+scripts/setup.sh start dev   # 后台运行
+scripts/setup.sh run dev     # 前台运行
+scripts/setup.sh stop dev
+scripts/setup.sh restart dev
+scripts/setup.sh status
+```
+
+生产环境要求当前环境已安装 `funserver` 命令：
+
+```bash
+scripts/setup.sh start prod
+```
+
+---
+
+## 关于 farfarfun
+
+[farfarfun](https://github.com/farfarfun) 是一个专注于实用工具库的开源组织，
+涵盖云存储、数据处理、AI、多媒体与开发工具链等方向。
+
+- 🏠 组织主页：<https://github.com/farfarfun>
+- 📦 PyPI：<https://pypi.org/user/niuliangtao/>
+- 📧 联系：farfarfun@qq.com
+
+本项目基于 [MIT](LICENSE) 协议开源。

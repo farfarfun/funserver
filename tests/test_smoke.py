@@ -7,6 +7,7 @@ ports, spawning real processes, or touching a user's real home directory.
 """
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -141,3 +142,11 @@ def test_cli_installed_console_script_runs():
     )
     assert result.returncode == 0, result.stderr
     assert "Usage" in result.stdout
+
+
+def test_lifecycle_script_contract():
+    script = Path(__file__).parents[1] / "scripts" / "setup.sh"
+    assert script.is_file()
+    result = subprocess.run(["bash", str(script), "status"], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert "dev:" in result.stdout and "prod:" in result.stdout
