@@ -47,27 +47,6 @@ scripts/setup.sh run dev
 scripts/setup.sh status
 ```
 
-### OneHub 服务器管理
-
-FunServer 内置了对 OneHub（API 网关）的支持：
-
-```bash
-# 安装 OneHub
-funonehub install
-
-# 启动 OneHub 服务
-funonehub start
-
-# 停止 OneHub 服务
-funonehub stop
-
-# 重启 OneHub 服务
-funonehub restart
-
-# 更新 OneHub
-funonehub update
-```
-
 ## 架构设计
 
 ### 核心组件
@@ -85,8 +64,6 @@ src/funserver/
 │   │   ├── base.py     # 服务器基类
 │   │   ├── install.py  # 安装管理
 │   │   └── start.py    # 启动管理
-│   ├── funjupyter/     # Jupyter 服务器支持
-│   └── onehub.py       # OneHub 服务器实现
 └── __init__.py
 ```
 
@@ -172,7 +149,7 @@ mycustomserver = "mypackage.servers.custom:mycustomserver"
 
 1. Fork 项目
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+3. 提交更改 (`git commit -m 'feat: 添加新功能'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 打开 Pull Request
 
@@ -190,14 +167,6 @@ mycustomserver = "mypackage.servers.custom:mycustomserver"
 - [GitHub 组织](https://github.com/farfarfun)
 - [项目仓库](https://github.com/farfarfun/funserver)
 - [发布页面](https://github.com/farfarfun/funserver/releases)
-
-## 更新日志
-
-### v1.0.52
-- 当前版本
-- 支持 OneHub 服务器管理
-- 完善的跨平台安装支持
-- 改进的日志管理系统
 
 ## 服务生命周期
 

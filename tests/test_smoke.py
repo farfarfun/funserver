@@ -1,9 +1,6 @@
-"""Lightweight smoke tests for funserver.
+"""funserver 公共 API 的轻量测试。
 
-These tests only check that the package imports cleanly and that its public
-surface (BaseServer / BaseCommandServer / server_parser and the CLI) behaves
-sanely with trivial inputs. They deliberately avoid binding real network
-ports, spawning real processes, or touching a user's real home directory.
+测试使用临时 HOME，避免绑定真实端口、启动真实服务或修改用户目录。
 """
 import subprocess
 import sys
@@ -81,6 +78,26 @@ def test_base_command_server_save_pid(tmp_path, monkeypatch):
     with open(server.pid_path) as f:
         content = f.read().strip()
     assert content.isdigit()
+
+
+def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
+    """真实 BaseServer 的前台命令路径应写入 PID 并执行命令。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    import funserver.servers.base.base as base_mod
+    from funserver.servers.base import BaseServer
+
+    class CommandServer(BaseServer):
+        def run_cmd(self, *args, **kwargs):
+            return "echo ok"
+
+    server = CommandServer("command-server")
+    with pytest.MonkeyPatch.context() as patcher:
+        calls = []
+        patcher.setattr(base_mod, "run_shell", lambda command: calls.append(command) or "0")
+        server._run()
+
+    assert calls == ["echo ok"]
+    assert server.pid_path and server.pid_path.endswith("run.pid")
 
 
 def test_base_install_unimplemented_raises():
