@@ -2,6 +2,8 @@
 
 测试使用临时 HOME，避免绑定真实端口、启动真实服务或修改用户目录。
 """
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,24 +12,21 @@ import pytest
 
 
 def test_import_top_level():
-    """`import funserver` must succeed (repo/import/PyPI name are all `funserver`)."""
+    """顶层包名应与仓库名和 PyPI 包名一致并可导入。"""
     import funserver  # noqa: F401
 
 
 def test_import_servers_subpackage():
-    """`funserver.servers` package itself imports cleanly.
+    """服务器子包本身应可正常导入。
 
-    Note: `funserver/servers/__init__.py` is empty -- it does not re-export
-    BaseServer/BaseCommandServer/server_parser, even though the sibling
-    `funserver/servers/base/__init__.py` does re-export them from
-    `funserver.servers.base.base`. So the actual public import path is
-    `funserver.servers.base`, not `funserver.servers`.
+    `funserver.servers` 不重新导出基础类，公共导入路径是
+    `funserver.servers.base`。
     """
     import funserver.servers  # noqa: F401
 
 
 def test_import_public_classes():
-    """The real public surface lives at funserver.servers.base."""
+    """基础模块应导出公开类和命令行解析器。"""
     from funserver.servers.base import BaseCommandServer, BaseServer, server_parser
 
     assert BaseServer is not None
@@ -36,8 +35,7 @@ def test_import_public_classes():
 
 
 def test_base_command_server_construct(tmp_path, monkeypatch):
-    """Construct BaseCommandServer with trivial args; redirect HOME so it
-    doesn't write into the real user's ~/.cache during tests."""
+    """构造基础命令服务时应在隔离的 HOME 下创建缓存目录。"""
     monkeypatch.setenv("HOME", str(tmp_path))
     from funserver.servers.base import BaseCommandServer
 
@@ -46,7 +44,7 @@ def test_base_command_server_construct(tmp_path, monkeypatch):
     assert server.server_name == "smoke-test-server"
     assert server.port == -1
     assert str(tmp_path) in server.dir_path
-    # __init__ should have created its cache/log dirs under the fake HOME.
+    # 初始化过程应在隔离目录中创建缓存和日志目录。
     import os
 
     assert os.path.isdir(server.dir_path)
@@ -55,20 +53,18 @@ def test_base_command_server_construct(tmp_path, monkeypatch):
 
 
 def test_base_command_server_start_stop(tmp_path, monkeypatch):
-    """start()/stop() are overridden on BaseCommandServer to just log, so
-    they're safe to call directly without touching real processes."""
+    """基础命令服务的启动和停止操作应可直接调用。"""
     monkeypatch.setenv("HOME", str(tmp_path))
     from funserver.servers.base import BaseCommandServer
 
     server = BaseCommandServer("smoke-test-server")
-    # Should not raise.
+    # 空操作实现不应抛出异常。
     server.start()
     server.stop()
 
 
 def test_base_command_server_save_pid(tmp_path, monkeypatch):
-    """_save_pid() writes the current pid to a file; verify it does so under
-    the isolated HOME directory rather than touching real system paths."""
+    """保存 PID 时应写入隔离 HOME 下的文件。"""
     monkeypatch.setenv("HOME", str(tmp_path))
     from funserver.servers.base import BaseCommandServer
 
@@ -87,7 +83,7 @@ def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
     from funserver.servers.base import BaseServer
 
     class CommandServer(BaseServer):
-        def run_cmd(self, *args, **kwargs):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
             return "echo ok"
 
     server = CommandServer("command-server")
@@ -101,9 +97,7 @@ def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
 
 
 def test_base_install_unimplemented_raises():
-    """BaseInstall.install_linux is abstract (raises NotImplementedError) for
-    classes that don't override it -- exercise the "unsupported platform"
-    plumbing without needing real install infra."""
+    """未实现的平台安装方法应抛出 NotImplementedError。"""
     from funserver.servers.base import BaseCommandServer
 
     server = BaseCommandServer("smoke-test-server-install")
@@ -111,9 +105,33 @@ def test_base_install_unimplemented_raises():
         server.install_linux()
 
 
+@pytest.mark.parametrize(
+    ("platform", "method_name"),
+    [
+        ("linux", "install_linux"),
+        ("darwin", "install_macos"),
+        ("win32", "install_windows"),
+    ],
+)
+def test_base_install_dispatches_platform(platform, method_name, monkeypatch):
+    """安装入口应按平台分发，并完整透传位置参数和关键字参数。"""
+    from funserver.servers.base.install import BaseInstall
+
+    calls = []
+    installer = BaseInstall()
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(
+        installer,
+        method_name,
+        lambda *args, **kwargs: calls.append((args, kwargs)) or True,
+    )
+
+    assert installer.install("value", enabled=True) is True
+    assert calls == [(("value",), {"enabled": True})]
+
+
 def test_server_parser_cli_help(tmp_path, monkeypatch):
-    """The Typer app built by server_parser() should expose a working --help,
-    exercised via Typer's CliRunner instead of a real subprocess/server."""
+    """命令行解析器应生成可正常显示帮助信息的应用。"""
     monkeypatch.setenv("HOME", str(tmp_path))
     from typer.testing import CliRunner
 
@@ -128,14 +146,7 @@ def test_server_parser_cli_help(tmp_path, monkeypatch):
 
 
 def test_cli_entry_point_module_path_is_importable():
-    """farfarfun/todo-list#157: pyproject.toml's [project.scripts] entry used
-    to point at `funserver.base:funserver`, but no `funserver/base.py` module
-    ever existed -- the real function lives at
-    `funserver.servers.base.base:funserver`. Fixed by pointing the console
-    script entry at the real module path. `funserver.base` itself still
-    doesn't exist (it was never meant to); the actual entry point target must
-    resolve.
-    """
+    """命令行入口应指向实际存在且可导入的模块。"""
     result = subprocess.run(
         [sys.executable, "-c", "from funserver.base import funserver"],
         capture_output=True,
@@ -152,8 +163,7 @@ def test_cli_entry_point_module_path_is_importable():
 
 
 def test_cli_installed_console_script_runs():
-    """The installed `funserver` console script (from [project.scripts])
-    should actually resolve and run, not just the underlying function."""
+    """已安装的 funserver 命令应能解析入口并显示帮助信息。"""
     result = subprocess.run(
         ["funserver", "--help"], capture_output=True, text=True
     )
@@ -167,3 +177,43 @@ def test_lifecycle_script_contract():
     result = subprocess.run(["bash", str(script), "status"], capture_output=True, text=True)
     assert result.returncode == 0
     assert "dev:" in result.stdout and "prod:" in result.stdout
+
+
+def test_lifecycle_script_process_identity(tmp_path):
+    """脚本应拒绝重复启动，并且不得终止与 PID 记录不匹配的进程。"""
+    project_dir = tmp_path / "project"
+    scripts_dir = project_dir / "scripts"
+    bin_dir = tmp_path / "bin"
+    scripts_dir.mkdir(parents=True)
+    bin_dir.mkdir()
+    source_script = Path(__file__).parents[1] / "scripts" / "setup.sh"
+    script = scripts_dir / "setup.sh"
+    shutil.copy2(source_script, script)
+    fake_uv = bin_dir / "uv"
+    fake_uv.write_text("#!/usr/bin/env bash\nwhile :; do sleep 1; done\n")
+    fake_uv.chmod(0o755)
+    env = os.environ | {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+    started = subprocess.run(
+        ["bash", str(script), "start", "dev"], env=env, capture_output=True, text=True
+    )
+    assert started.returncode == 0, started.stderr
+
+    duplicate = subprocess.run(
+        ["bash", str(script), "start", "dev"], env=env, capture_output=True, text=True
+    )
+    assert duplicate.returncode != 0
+
+    stopped = subprocess.run(
+        ["bash", str(script), "stop", "dev"], env=env, capture_output=True, text=True
+    )
+    assert stopped.returncode == 0, stopped.stderr
+
+    pid_file = project_dir / ".run" / "funserver-dev.pid"
+    pid_file.write_text(f"{os.getpid()}\n伪造启动时间\n伪造可执行文件\n伪造参数\n")
+    mismatched = subprocess.run(
+        ["bash", str(script), "stop", "dev"], env=env, capture_output=True, text=True
+    )
+    assert mismatched.returncode != 0
+    assert "未发送终止信号" in mismatched.stderr
+    assert os.getpid() > 0

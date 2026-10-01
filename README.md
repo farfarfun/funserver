@@ -138,8 +138,8 @@ mycustomserver = "mypackage.servers.custom:mycustomserver"
 ## 依赖项
 
 - `click>=8.1.8` - 命令行界面
-- `funbuild>=1.5.11` - 构建工具
-- `funutil>=1.0.50` - 实用工具
+- `funshell>=1.0.2` - 命令执行和进程管理
+- `farlog>=1.1.7` - 日志记录
 - `psutil>=7.0.0` - 进程管理
 - `typer>=0.15.3` - 现代命令行界面
 

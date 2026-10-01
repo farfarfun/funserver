@@ -1,5 +1,6 @@
 import sys
 from abc import ABC
+from typing import Any
 
 from farlog import getLogger
 
@@ -9,7 +10,7 @@ logger = getLogger("funserver")
 class BaseInstall(ABC):
     """定义跨平台安装和卸载接口。"""
 
-    def install(self, *args, **kwargs) -> bool:
+    def install(self, *args: Any, **kwargs: Any) -> bool:
         """按当前操作系统安装服务并返回是否成功。"""
         if sys.platform.startswith("linux"):
             logger.info("当前系统为 Linux")
@@ -24,7 +25,7 @@ class BaseInstall(ABC):
             logger.error("无法识别当前系统")
             return False
 
-    def uninstall(self, *args, **kwargs) -> bool:
+    def uninstall(self, *args: Any, **kwargs: Any) -> bool:
         """按当前操作系统卸载服务并返回是否成功。"""
         if sys.platform.startswith("linux"):
             logger.info("当前系统为 Linux")
@@ -39,26 +40,26 @@ class BaseInstall(ABC):
             logger.error("无法识别当前系统")
             return False
 
-    def install_linux(self, *args, **kwargs) -> bool:
+    def install_linux(self, *args: Any, **kwargs: Any) -> bool:
         """在 Linux 上安装服务。"""
         raise NotImplementedError()
 
-    def install_macos(self, *args, **kwargs) -> bool:
+    def install_macos(self, *args: Any, **kwargs: Any) -> bool:
         """在 macOS 上安装服务，默认复用 Linux 实现。"""
         return self.install_linux(*args, **kwargs)
 
-    def install_windows(self, *args, **kwargs) -> bool:
+    def install_windows(self, *args: Any, **kwargs: Any) -> bool:
         """在 Windows 上安装服务。"""
         raise NotImplementedError()
 
-    def uninstall_linux(self, *args, **kwargs) -> bool:
+    def uninstall_linux(self, *args: Any, **kwargs: Any) -> bool:
         """在 Linux 上卸载服务。"""
         raise NotImplementedError()
 
-    def uninstall_macos(self, *args, **kwargs) -> bool:
+    def uninstall_macos(self, *args: Any, **kwargs: Any) -> bool:
         """在 macOS 上卸载服务，默认复用 Linux 实现。"""
         return self.install_linux(*args, **kwargs)
 
-    def uninstall_windows(self, *args, **kwargs) -> bool:
+    def uninstall_windows(self, *args: Any, **kwargs: Any) -> bool:
         """在 Windows 上卸载服务。"""
         raise NotImplementedError()

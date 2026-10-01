@@ -1,7 +1,7 @@
 [project]
 name = "funserver"
 version = "1.0.72"
-description = "funserver"
+description = "提供跨平台安装、进程管理和命令行控制的 Python 服务器管理框架"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
