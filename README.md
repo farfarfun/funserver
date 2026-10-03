@@ -25,9 +25,30 @@ pip install funserver
 
 ### 基本用法
 
-FunServer 提供了统一的命令行接口来管理服务器：
+`pip install funserver` 只安装 Python 包和 `funserver` 命令行工具，`scripts/setup.sh`
+是仓库文件，**不会**随 PyPI 包一起安装。两种使用方式分开说明：
+
+#### 仅安装了 PyPI 包
 
 ```bash
+# 查看命令行帮助
+funserver --help
+
+# 前台运行内置的空操作示例服务
+funserver run
+
+# 后台启动/停止/重启
+funserver start
+funserver stop
+funserver restart
+```
+
+#### 克隆仓库后使用服务脚本（开发/生产环境管理）
+
+```bash
+git clone https://github.com/farfarfun/funserver.git
+cd funserver
+
 # 启动开发环境（后台）
 scripts/setup.sh start dev
 
@@ -36,9 +57,6 @@ scripts/setup.sh stop dev
 
 # 重启服务器
 scripts/setup.sh restart dev
-
-# 更新服务器
-funserver update
 
 # 运行服务器（前台运行）
 scripts/setup.sh run dev
@@ -76,29 +94,31 @@ src/funserver/
 ```python
 from funserver.servers.base.base import BaseServer, server_parser
 
+
 class MyCustomServer(BaseServer):
     def __init__(self):
         super().__init__(server_name="mycustomserver")
-    
+
     def run_cmd(self, *args, **kwargs):
         # 返回启动服务器的命令
         return "my-server --config config.yaml"
-    
+
     def install_linux(self, *args, **kwargs):
         # Linux 安装逻辑
         return True
-    
+
     def install_macos(self, *args, **kwargs):
         # macOS 安装逻辑
         return True
-    
+
     def install_windows(self, *args, **kwargs):
         # Windows 安装逻辑
         return True
-    
+
     def update(self, *args, **kwargs):
         # 更新逻辑
         pass
+
 
 def mycustomserver():
     app = server_parser(MyCustomServer())

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT_DIR/.run"
+# 固定工作目录到脚本自身所在的项目根，保证从仓库外的任意目录调用本脚本时，
+# `uv run` 之类依赖 CWD 查找 pyproject.toml 的命令都能定位到正确的项目。
+cd -- "$ROOT_DIR"
 usage() {
   printf '用法: %s {start|stop|restart|run|status} [dev|prod]\n' "${0##*/}" >&2
 }

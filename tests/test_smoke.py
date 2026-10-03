@@ -2,12 +2,15 @@
 
 测试使用临时 HOME，避免绑定真实端口、启动真实服务或修改用户目录。
 """
+
 import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
+import psutil
 import pytest
 
 
@@ -63,6 +66,21 @@ def test_base_command_server_start_stop(tmp_path, monkeypatch):
     server.stop()
 
 
+def test_base_command_server_run_does_not_raise(tmp_path, monkeypatch):
+    """CLI 默认的空操作服务执行 `_run()`（即 `funserver run`）不应抛出异常。
+
+    回归测试：此前 `BaseCommandServer` 只覆盖了 `start`/`stop`，未覆盖
+    `run`/`run_cmd`，导致 `_run()` 必定命中 `BaseStart.run_cmd` 的
+    `NotImplementedError`，已安装的 `funserver run` 命令每次都会崩溃。
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from funserver.servers.base import BaseCommandServer
+
+    server = BaseCommandServer("smoke-test-server")
+    server._run()
+    assert os.path.exists(server.pid_path)
+
+
 def test_base_command_server_save_pid(tmp_path, monkeypatch):
     """保存 PID 时应写入隔离 HOME 下的文件。"""
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -94,6 +112,144 @@ def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
 
     assert calls == ["echo ok"]
     assert server.pid_path and server.pid_path.endswith("run.pid")
+
+
+def test_start_then_stop_terminates_managed_process(tmp_path, monkeypatch):
+    """`_start` 应记录真实后台子进程的 PID；`_stop` 应能据此定位并终止该进程。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from funserver.servers.base import BaseServer
+
+    class SleepServer(BaseServer):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
+            return "sleep 30"
+
+        def stop(self, *args: object, **kwargs: object) -> None:
+            """跳过默认的按端口/进程名兜底清理，只验证基于 PID 签名的终止逻辑。"""
+
+    server = SleepServer("sleep-server")
+    os.makedirs(server.run_path, exist_ok=True)
+
+    server._start()
+    try:
+        assert os.path.exists(server.pid_path)
+        with open(server.pid_path) as f:
+            pid = int(f.read().strip())
+        assert psutil.pid_exists(pid)
+        # fork 之后到 execve 替换进程镜像之间有极短窗口，这段时间里 `comm`
+        # 可能还显示父 shell 的名字，短暂轮询等它稳定成目标命令名。
+        name = ""
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            try:
+                name = psutil.Process(pid).name()
+            except psutil.NoSuchProcess:
+                break
+            if "sleep" in name:
+                break
+            time.sleep(0.02)
+        assert "sleep" in name
+        assert os.path.exists(f"{server.pid_path}.meta")
+
+        server._stop()
+
+        deadline = time.monotonic() + 5
+        while psutil.pid_exists(pid) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert not psutil.pid_exists(pid)
+    finally:
+        if psutil.pid_exists(pid):
+            psutil.Process(pid).kill()
+
+    assert not os.path.exists(server.pid_path)
+    assert not os.path.exists(f"{server.pid_path}.meta")
+
+
+def test_stop_with_mismatched_pid_signature_does_not_kill(tmp_path, monkeypatch):
+    """PID 文件记录的启动时间与实际进程不符时，必须判定为陈旧 PID，不发送终止信号。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    import signal
+
+    import funserver.servers.base.base as base_mod
+    from funserver.servers.base import BaseServer
+
+    class NoOpStopServer(BaseServer):
+        def stop(self, *args: object, **kwargs: object) -> None:
+            """同上，隔离默认兜底清理。"""
+
+    server = NoOpStopServer("mismatch-server")
+    # 用当前测试进程的真实 PID 伪造一份 PID 文件，但签名写一个明显错误的启动时间，
+    # 模拟「PID 被操作系统回收后分配给无关进程」的场景。
+    with open(server.pid_path, "w") as f:
+        f.write(str(os.getpid()))
+    with open(f"{server.pid_path}.meta", "w") as f:
+        f.write("1.0")
+
+    real_kill = base_mod.os.kill
+    killed = []
+
+    def fake_kill(pid, sig):
+        # `psutil.pid_exists` 内部也会用 0 号信号探测进程是否存在，
+        # 这里只拦截真正的终止信号（SIGKILL/SIGTERM），探测调用原样放行。
+        if sig in (signal.SIGKILL, signal.SIGTERM):
+            killed.append((pid, sig))
+            return
+        return real_kill(pid, sig)
+
+    monkeypatch.setattr(base_mod.os, "kill", fake_kill)
+
+    server._stop()
+
+    assert killed == []
+    assert not os.path.exists(server.pid_path)
+
+
+def test_stop_without_pid_file_is_noop(tmp_path, monkeypatch):
+    """没有 PID 文件时（从未启动或已清理），`_stop` 不应尝试终止任何进程。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    import funserver.servers.base.base as base_mod
+    from funserver.servers.base import BaseServer
+
+    class NoOpStopServer(BaseServer):
+        def stop(self, *args: object, **kwargs: object) -> None:
+            """同上，隔离默认兜底清理。"""
+
+    server = NoOpStopServer("empty-server")
+    killed = []
+    monkeypatch.setattr(base_mod.os, "kill", lambda pid, sig: killed.append((pid, sig)))
+
+    server._stop()
+
+    assert killed == []
+
+
+def test_cli_install_nonzero_exit_on_failure(tmp_path, monkeypatch):
+    """`install` 返回 False 时，CLI 必须以非 0 退出码结束，不能静默成功退出。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from typer.testing import CliRunner
+
+    from funserver.servers.base import BaseCommandServer, server_parser
+
+    server = BaseCommandServer("install-fail-server")
+    monkeypatch.setattr(server, "install", lambda *a, **kw: False)
+    app = server_parser(server)
+    result = CliRunner().invoke(app, ["install"])
+
+    assert result.exit_code != 0
+
+
+def test_cli_install_zero_exit_on_success(tmp_path, monkeypatch):
+    """`install` 返回 True 时，CLI 应以 0 退出码正常结束。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from typer.testing import CliRunner
+
+    from funserver.servers.base import BaseCommandServer, server_parser
+
+    server = BaseCommandServer("install-ok-server")
+    monkeypatch.setattr(server, "install", lambda *a, **kw: True)
+    app = server_parser(server)
+    result = CliRunner().invoke(app, ["install"])
+
+    assert result.exit_code == 0
 
 
 def test_base_install_unimplemented_raises():
@@ -164,11 +320,21 @@ def test_cli_entry_point_module_path_is_importable():
 
 def test_cli_installed_console_script_runs():
     """已安装的 funserver 命令应能解析入口并显示帮助信息。"""
-    result = subprocess.run(
-        ["funserver", "--help"], capture_output=True, text=True
-    )
+    result = subprocess.run(["funserver", "--help"], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "Usage" in result.stdout
+
+
+def test_cli_installed_console_script_run_exits_cleanly(tmp_path):
+    """已安装的 `funserver run` 命令应正常退出，不应抛出未处理异常。
+
+    回归测试：修复前 `BaseCommandServer` 未覆盖 `run`/`run_cmd`，`funserver run`
+    每次都会因 `NotImplementedError` 崩溃（非 0 退出码并打印异常堆栈）。
+    """
+    env = os.environ | {"HOME": str(tmp_path)}
+    result = subprocess.run(["funserver", "run"], capture_output=True, text=True, env=env)
+    assert result.returncode == 0, result.stderr
+    assert "NotImplementedError" not in result.stderr
 
 
 def test_lifecycle_script_contract():
