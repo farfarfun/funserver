@@ -37,10 +37,8 @@ funserver --help
 # 前台运行内置的空操作示例服务
 funserver run
 
-# 后台启动/停止/重启
-funserver start
-funserver stop
-funserver restart
+# 内置服务只用于验证命令安装和前台执行；它不是常驻服务。
+# 为实际服务注册自己的 console-script 后，使用其 start/stop/restart 子命令。
 ```
 
 #### 克隆仓库后使用服务脚本（开发/生产环境管理）
@@ -138,15 +136,21 @@ mycustomserver = "mypackage.servers.custom:mycustomserver"
 
 ### BaseServer
 
-主要方法：
+`BaseServer` 是由 `server_parser()` 暴露生命周期命令的基类，而不是直接调用
+`start()`、`restart()` 或 `_start()` 的公开 API。自定义服务需要实现 `run_cmd()`
+（返回实际服务命令）和 `update()`，然后通过注册的 console-script 调用：
 
-- `start()` - 启动服务器（后台运行）
-- `stop()` - 停止服务器
-- `restart()` - 重启服务器
-- `run()` - 运行服务器（前台运行）
-- `update()` - 更新服务器
-- `install()` - 安装服务器
-- `run_cmd()` - 返回启动命令（需要子类实现）
+```bash
+mycustomserver run
+mycustomserver start
+mycustomserver stop
+mycustomserver restart
+mycustomserver update
+```
+
+`start` 会创建 `~/opt/{server_name}` 作为服务命令的工作目录，并在启动前拒绝已有
+受管进程；PID 与进程创建时间不匹配的陈旧记录会被清理。`run` 是前台命令，不创建
+可供 `stop` 管理的 PID 文件。
 
 ### 配置
 

@@ -43,6 +43,46 @@ managed_pid() {
   [[ "$actual" == "$expected" ]]
 }
 
+installed_funserver() {
+  local command_path interpreter
+  command_path="$(command -v funserver 2>/dev/null)" || {
+    printf '生产环境需要已安装的 funserver 命令\n' >&2
+    return 1
+  }
+  interpreter="$(sed -n '1s/^#![[:space:]]*\([^[:space:]]*\).*/\1/p' "$command_path")"
+  [[ -n "$interpreter" && -x "$interpreter" ]] || {
+    printf '生产环境的 funserver 必须是已安装发行包生成的 Python console-script\n' >&2
+    return 1
+  }
+  "$interpreter" - "$ROOT_DIR" "$command_path" <<'PY'
+import json
+import sys
+import sysconfig
+from importlib import metadata
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+command = Path(sys.argv[2]).resolve()
+try:
+    distribution = metadata.distribution("funserver")
+    package_root = Path(distribution.locate_file("")).resolve()
+    direct_url = distribution.read_text("direct_url.json")
+    editable = bool(direct_url and json.loads(direct_url).get("dir_info", {}).get("editable"))
+    entry_points = distribution.entry_points
+except (metadata.PackageNotFoundError, OSError, ValueError, json.JSONDecodeError) as error:
+    raise SystemExit(f"无法验证 funserver 的已安装发行包: {error}")
+
+if editable or repo_root == package_root or repo_root in package_root.parents:
+    raise SystemExit("生产环境拒绝使用源码 checkout 或 editable 安装")
+if not any(point.group == "console_scripts" and point.name == "funserver" for point in entry_points):
+    raise SystemExit("已安装的 funserver 发行包没有 console-script 入口")
+if command.parent != Path(sysconfig.get_path("scripts")).resolve():
+    raise SystemExit("funserver 命令不在已安装 Python 环境的 scripts 目录")
+if repo_root == command or repo_root in command.parents:
+    raise SystemExit("生产环境拒绝使用 checkout 中的 funserver 命令")
+PY
+}
+
 command_for() {
   case "$1" in
     dev)
@@ -57,10 +97,7 @@ command_for() {
       fi
       ;;
     prod)
-      command -v funserver >/dev/null 2>&1 || {
-        printf '生产环境需要已安装的 funserver 命令\n' >&2
-        return 1
-      }
+      installed_funserver
       COMMAND=("$(command -v funserver)")
       ;;
     *) usage; return 2 ;;
@@ -76,10 +113,7 @@ run_foreground() {
       exec funserver run
       ;;
     prod)
-      command -v funserver >/dev/null 2>&1 || {
-        printf '生产环境需要已安装的 funserver 命令\n' >&2
-        return 1
-      }
+      installed_funserver
       exec funserver run
       ;;
     *) usage; return 2 ;;

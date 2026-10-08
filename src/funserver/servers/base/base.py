@@ -40,16 +40,27 @@ class BaseServer(BaseStart, BaseInstall):
         self.__write_pid(pid_path)
 
     def _run(self, *args: Any, **kwargs: Any) -> None:
-        """前台执行服务命令并记录 PID。"""
-        self.__write_pid()
+        """前台执行服务命令。
+
+        前台命令的子进程不一定继承 CLI 进程的 PID，因此不能将当前 CLI
+        进程登记为可由 ``stop`` 管理的服务进程。
+        """
         cmd = self.run_cmd(*args, **kwargs)
         if cmd is not None:
-            run_shell(cmd)
+            self.__run_shell(cmd)
         else:
             self.run(*args, **kwargs)
 
     def _start(self, *args: Any, **kwargs: Any) -> None:
         """后台启动服务，记录真实子进程 PID 并将输出写入日期日志。"""
+        if self.__is_managed_process_running():
+            raise RuntimeError(f"{self.server_name} is already running")
+        if os.path.exists(self.pid_path):
+            pid = self.__read_pid()
+            if pid > 0 and psutil.pid_exists(pid) and self.__read_signature() is None:
+                raise RuntimeError(f"cannot verify existing pid for {self.server_name}")
+            self.__remove_pid_files()
+        os.makedirs(self.run_path, exist_ok=True)
         cmd2 = self.run_cmd(*args, **kwargs)
         if cmd2 is None:
             cmd2 = f"{self.server_name} run "
@@ -61,8 +72,11 @@ class BaseServer(BaseStart, BaseInstall):
             f'cd "{self.run_path}" && '
             f'(nohup {cmd2} >>"{log_path}" 2>&1 & echo $! >"{self.pid_path}")'
         )
-        run_shell(cmd)
+        self.__run_shell(cmd)
         self.__write_signature_from_pid_file()
+        if not self.__is_managed_process_running():
+            self.__remove_pid_files()
+            raise RuntimeError(f"{self.server_name} failed to start")
         logger.success(f"{self.server_name} start success")
 
     def _stop(self, *args: Any, **kwargs: Any) -> None:
@@ -96,6 +110,12 @@ class BaseServer(BaseStart, BaseInstall):
             logger.success(f"current pid={pid},write to {pid_path}")
             f.write(str(pid))
         self.__write_signature(pid, pid_path)
+
+    def __run_shell(self, command: str) -> None:
+        """运行命令，并将 shell 失败转换为生命周期失败。"""
+        result = run_shell(command)
+        if result != "0":
+            raise RuntimeError(f"{self.server_name} command failed: {result}")
 
     def __write_signature_from_pid_file(self, pid_path: str | None = None) -> None:
         """`_start` 用子 shell 写完 PID 文件后，补写对应的进程身份签名。"""
@@ -142,6 +162,27 @@ class BaseServer(BaseStart, BaseInstall):
                 os.remove(path)
         return create_time
 
+    def __remove_pid_files(self, pid_path: str | None = None) -> None:
+        """删除一对已确认陈旧的 PID 身份记录。"""
+        path = pid_path or self.pid_path
+        for file_path in (path, self.__signature_path(path)):
+            try:
+                os.remove(file_path)
+            except FileNotFoundError:
+                pass
+
+    def __is_managed_process_running(self, pid_path: str | None = None) -> bool:
+        """PID 和创建时间都匹配时，才把进程视为本服务的活跃实例。"""
+        pid = self.__read_pid(pid_path=pid_path)
+        expected_create_time = self.__read_signature(pid_path=pid_path)
+        if pid <= 0 or expected_create_time is None or not psutil.pid_exists(pid):
+            return False
+        try:
+            actual_create_time = psutil.Process(pid).create_time()
+        except psutil.Error:
+            return False
+        return abs(actual_create_time - expected_create_time) <= 1
+
     def __kill_pid(self):
         """终止由 `_run`/`_start` 记录的服务进程。
 
@@ -149,8 +190,9 @@ class BaseServer(BaseStart, BaseInstall):
         回收后分配给了完全无关的进程。这里额外核对进程启动时间（创建时记录的
         签名文件），身份不匹配时只清理陈旧文件并放弃发送终止信号。
         """
-        pid = self.__read_pid(remove=True)
-        expected_create_time = self.__read_signature(remove=True)
+        pid = self.__read_pid()
+        expected_create_time = self.__read_signature()
+        self.__remove_pid_files()
         if pid <= 0 or not psutil.pid_exists(pid):
             logger.warning(f"pid {pid} not exists")
             return

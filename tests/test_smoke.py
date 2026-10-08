@@ -78,7 +78,7 @@ def test_base_command_server_run_does_not_raise(tmp_path, monkeypatch):
 
     server = BaseCommandServer("smoke-test-server")
     server._run()
-    assert os.path.exists(server.pid_path)
+    assert not os.path.exists(server.pid_path)
 
 
 def test_base_command_server_save_pid(tmp_path, monkeypatch):
@@ -94,8 +94,8 @@ def test_base_command_server_save_pid(tmp_path, monkeypatch):
     assert content.isdigit()
 
 
-def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
-    """真实 BaseServer 的前台命令路径应写入 PID 并执行命令。"""
+def test_base_server_run_command_executes_without_writing_managed_pid(tmp_path, monkeypatch):
+    """前台命令不应将 CLI 自身写成可由 stop 管理的服务 PID。"""
     monkeypatch.setenv("HOME", str(tmp_path))
     import funserver.servers.base.base as base_mod
     from funserver.servers.base import BaseServer
@@ -111,7 +111,77 @@ def test_base_server_run_command_writes_pid_and_executes(tmp_path, monkeypatch):
         server._run()
 
     assert calls == ["echo ok"]
-    assert server.pid_path and server.pid_path.endswith("run.pid")
+    assert not os.path.exists(server.pid_path)
+
+
+def test_start_rejects_live_managed_process(tmp_path, monkeypatch):
+    """重复 start 不得覆盖仍然指向受管进程的 PID 文件。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from funserver.servers.base import BaseServer
+
+    class SleepServer(BaseServer):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
+            return "sleep 30"
+
+    server = SleepServer("duplicate-start-server")
+    server._start()
+    try:
+        with pytest.raises(RuntimeError, match="already running"):
+            server._start()
+    finally:
+        server._stop()
+
+
+def test_start_creates_missing_run_path(tmp_path, monkeypatch):
+    """后台启动应自行创建文档约定的运行目录。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from funserver.servers.base import BaseServer
+
+    class SleepServer(BaseServer):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
+            return "sleep 30"
+
+    server = SleepServer("create-run-path-server")
+    assert not os.path.exists(server.run_path)
+    server._start()
+    try:
+        assert os.path.isdir(server.run_path)
+    finally:
+        server._stop()
+
+
+def test_start_refuses_live_pid_without_signature(tmp_path, monkeypatch):
+    """活跃 PID 缺少身份签名时不得被当作陈旧记录覆盖。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from funserver.servers.base import BaseServer
+
+    class CommandServer(BaseServer):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
+            return "echo should-not-run"
+
+    server = CommandServer("unverified-pid-server")
+    with open(server.pid_path, "w") as f:
+        f.write(str(os.getpid()))
+
+    with pytest.raises(RuntimeError, match="cannot verify existing pid"):
+        server._start()
+    assert os.path.exists(server.pid_path)
+
+
+def test_run_command_failure_raises(tmp_path, monkeypatch):
+    """外部命令失败必须使生命周期命令失败。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    import funserver.servers.base.base as base_mod
+    from funserver.servers.base import BaseServer
+
+    class CommandServer(BaseServer):
+        def run_cmd(self, *args: object, **kwargs: object) -> str:
+            return "false"
+
+    server = CommandServer("failed-command-server")
+    monkeypatch.setattr(base_mod, "run_shell", lambda command: "1")
+    with pytest.raises(RuntimeError, match="command failed"):
+        server._run()
 
 
 def test_start_then_stop_terminates_managed_process(tmp_path, monkeypatch):
